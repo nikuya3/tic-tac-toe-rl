@@ -133,8 +133,8 @@ opponent_tic = tics[2]
 empty_tic = tics[0]
 value_table = initialize_value_table(agent_tic, tics)
 game_state = initial_state()
-epsilon = 0.2
-alpha = 0.5
+epsilon = 0.1
+alpha = 0.8
 fixed_opponent = True
 wins = 0
 losses = 0
@@ -164,7 +164,7 @@ while episodes > 0:
         game_state = opponent_move(game_state, str(opponent_tic), str(empty_tic), fixed_opponent)
         if str(empty_tic) not in game_state:
             continue
-        exploitative = random() < epsilon
+        exploitative = random() > epsilon
         step = select_next_step(game_state, value_table, str(agent_tic), str(empty_tic), exploitative)
         if exploitative:
             value_table = update_value(value_table, game_state, step, alpha)
