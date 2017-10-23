@@ -1,5 +1,5 @@
 from math import floor
-from random import randint, random
+from random import randint
 from os import listdir, mkdir
 from os.path import isdir, join
 from pickle import dump, load
@@ -35,23 +35,25 @@ def is_win(state, tic):
                    or (state[3] == tic and state[4] == tic and state[5] == tic) \
                    or (state[6] == tic and state[7] == tic and state[8] == tic)
     diagonal = (state[0] == tic and state[4] == tic and state[8] == tic) \
-               or (state[2] == tic and state[4] == tic and state[5] == tic)
+               or (state[2] == tic and state[4] == tic and state[6] == tic)
     return straight_vert or straight_hor or diagonal
 
 
-def is_tie(state, empty_tic):
-    return empty_tic not in state
+def is_tie(state, agent_tic, opponent_tic, empty_tic):
+    return empty_tic not in state or is_win(state, agent_tic) and is_win(state, opponent_tic)
 
 
-def initialize_value_table(agent_tic, tics):
+def initialize_value_table(agent_tic, opponent_tic, empty_tic, tics):
     value_table = {}
     # value_table['222222222'] = 0
     states = permutate_all_states(tics)
     for state in states:
-        if is_win(state, str(agent_tic)):
-            value_table[state] = 1
-        elif is_win(state, '2'):
+        if is_tie(state, agent_tic, opponent_tic, empty_tic):
             value_table[state] = 0
+        elif is_win(state, opponent_tic):
+            value_table[state] = -1
+        elif is_win(state, agent_tic):
+            value_table[state] = 1
         else:
             value_table[state] = 0.5
     return value_table
@@ -59,16 +61,26 @@ def initialize_value_table(agent_tic, tics):
 
 def select_next_step(state, value_table, agent_tic, empty_tic, exploitative):
     empty_indices = find(state, empty_tic)
+    values = []
+    possible_states = []
     best_value = 0
     best_step = ''
     best_index = -1
     for i in empty_indices:
         possible_state = state
         possible_state = replace(possible_state, i, agent_tic)
-        if value_table[possible_state] >= best_value:
-            best_value = value_table[possible_state]
-            best_step = possible_state
-            best_index = i
+        values.append(value_table[possible_state])
+        possible_states.append(possible_state)
+        # if value_table[possible_state] >= best_value:
+        #     best_value = value_table[possible_state]
+        #     best_step = possible_state
+        #     best_index = i
+    best_value = max(values)
+    indices = [i for i in range(len(values)) if values[i] == best_value]
+    indices_index = randint(0, len(indices) - 1)
+    best_index = indices[indices_index]
+    best_step = possible_states[indices[indices_index]]
+
     if not exploitative:
         index = best_index
         while index == best_index:
@@ -80,13 +92,16 @@ def select_next_step(state, value_table, agent_tic, empty_tic, exploitative):
 
 def update_value(value_table, prev_state, state, alpha):
     value_table[prev_state] = value_table[prev_state] + alpha * (value_table[state] - value_table[prev_state])
+    # print(value_table[prev_state])
+    # print(value_table[state])
     return value_table
 
 
 def opponent_move(state, tic, empty_tic, fixed):
     if fixed:
-        fixed_opponent_moves = [8, 0, 2, 1]
-        index = fixed_opponent_moves[state.count(tic)]
+        fixed_opponent_moves = [[8, 0, 2, 6, 1], [0, 4, 5, 8], [0, 1, 3, 2], [2, 4, 5, 8]]
+        moveset_i = randint(0, len(fixed_opponent_moves) - 1)
+        index = fixed_opponent_moves[0][state.count(tic)]
     else:
         index = -1
         while index < 0:
